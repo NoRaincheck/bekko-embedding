@@ -68,7 +68,9 @@ class TokenizerTests(unittest.TestCase):
 
     def test_non_ascii_tokens_are_stripped(self) -> None:
         self.assertEqual(self.tokenizer.tokenize("日本語"), [])
-        self.assertEqual(self.tokenizer.tokenize("hello\ue000world"), ["hello", "world"])
+        self.assertEqual(
+            self.tokenizer.tokenize("hello\ue000world"), ["hello", "world"]
+        )
 
     def test_empty_input(self) -> None:
         self.assertEqual(self.tokenizer.encode(""), [])

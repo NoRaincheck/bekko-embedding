@@ -58,10 +58,7 @@ def _asset(name: str, data_dir: str | Path | None = None) -> dict:
 def _ascii_punctuation(char: str) -> bool:
     code = ord(char)
     return (
-        33 <= code <= 47
-        or 58 <= code <= 64
-        or 91 <= code <= 96
-        or 123 <= code <= 126
+        33 <= code <= 47 or 58 <= code <= 64 or 91 <= code <= 96 or 123 <= code <= 126
     )
 
 
@@ -161,7 +158,7 @@ class StaticEmbedding:
         dim: int = 32,
     ) -> None:
         # Weights are stored as raw bytes; reinterpret them as signed int8.
-        weights = (np.asarray(weights, dtype=np.int16).reshape(-1, dim) & 0xFF)
+        weights = np.asarray(weights, dtype=np.int16).reshape(-1, dim) & 0xFF
         weights = weights.astype(np.uint8).view(np.int8)
         scales = np.asarray(scales, dtype=np.float32).reshape(-1, 1)
         if len(weights) != len(tokens) or len(scales) != len(tokens):

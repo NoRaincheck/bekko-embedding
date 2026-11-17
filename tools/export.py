@@ -26,6 +26,7 @@ from typing import Iterator
 
 # --- Minimal Protobuf reader -------------------------------------------------
 
+
 def _read_varint(data: bytes, pos: int) -> tuple[int, int]:
     value = 0
     shift = 0
@@ -91,6 +92,7 @@ def read_initializers(path: Path) -> dict[str, bytes]:
 
 
 # --- Asset writing -----------------------------------------------------------
+
 
 def select_tokens(vocab: dict[str, int], mode: str) -> list[tuple[str, int]]:
     """Select the tokens to keep, in original vocabulary order."""
