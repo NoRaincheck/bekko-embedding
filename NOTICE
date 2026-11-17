@@ -1,0 +1,8 @@
+This project contains data derived from hotchpotch/bekko-static-embedding-v1:
+
+    https://huggingface.co/hotchpotch/bekko-static-embedding-v1
+
+The upstream model, tokenizer and weights are licensed under the MIT License:
+
+    Copyright (c) 2026 Yuichi Tateno
+

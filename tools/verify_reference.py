@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""Dev-only check against the upstream ONNX graph and tokenizer.
+
+Requires ``onnxruntime``, ``tokenizers`` and ``numpy`` (dev-only).  Run from
+the repository root:
+
+    uv run --with numpy --with onnxruntime --with tokenizers \
+        python tools/verify_reference.py --onnx model_int8_dim32.onnx \
+        --tokenizer tokenizer.json
+"""
+
+from __future__ import annotations
+
+import argparse
+
+try:
+    import numpy as np
+    import onnxruntime as ort
+    from tokenizers import Tokenizer
+except ImportError as exc:
+    raise SystemExit(
+        "this check needs dev-only packages: onnxruntime, tokenizers and numpy"
+    ) from exc
+
+from bekko_embedding import WordPieceTokenizer, encode
+
+SENTENCES = [
+    "The weather is lovely today.",
+    "It's so sunny outside!",
+    "He drove to the stadium.",
+    "What are the characteristics of sushi?",
+    "A warm noodle soup served in broth with sliced toppings.",
+    "A Japanese dish made with vinegared rice, often shaped with seafood.",
+    "Python is a programming language known for its readability.",
+    "Who designed the famous basilica in Barcelona?",
+    "",
+    "a_b",
+    "#hashtag",
+    "it'sso sunny",
+    "  Hello   World  ",
+    "123.456-789",
+    "@user_name /path/to/file.html?x=1&y=2",
+]
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--onnx", required=True)
+    parser.add_argument("--tokenizer", required=True)
+    args = parser.parse_args()
+
+    reference = Tokenizer.from_file(args.tokenizer)
+    reference.no_padding()
+    ours = WordPieceTokenizer.from_packaged()
+    for text in SENTENCES:
+        expected_tokens = reference.encode(text, add_special_tokens=False).tokens
+        if ours.tokenize(text) != expected_tokens:
+            raise AssertionError(f"tokenization differs for {text!r}")
+
+    encoded = reference.encode_batch(SENTENCES, add_special_tokens=False)
+    width = max(len(item.ids) for item in encoded)
+    ids = np.zeros((len(encoded), width), dtype=np.int64)
+    mask = np.zeros_like(ids)
+    for row, item in enumerate(encoded):
+        ids[row, : len(item.ids)] = item.ids
+        mask[row, : len(item.ids)] = 1
+
+    session = ort.InferenceSession(args.onnx, providers=["CPUExecutionProvider"])
+    expected = session.run(
+        ["sentence_embedding"], {"input_ids": ids, "attention_mask": mask}
+    )[0]
+    actual = np.asarray(encode(SENTENCES), dtype=np.float32)
+    difference = np.abs(expected - actual).max()
+    print(f"compared {len(SENTENCES)} sentences; max abs difference: {difference}")
+    if difference:
+        raise AssertionError("outputs differ from the upstream ONNX graph")
+
+
+if __name__ == "__main__":
+    main()
